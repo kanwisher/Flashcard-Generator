@@ -1,6 +1,3 @@
-# Flashcard-Generator
-
-
 //basically building an api
 
 
@@ -62,3 +59,71 @@
 //study flash cards selection
 
 //use inqurirer
+
+//loop through basic flash card array, if finished or empty, loop through clozure array, if finished or empty, display score, prompt user to return to menu or exit program
+
+
+
+
+
+
+
+
+
+
+
+
+
+//below code works so far needs additional logic, see above note//
+
+
+
+
+var inquirer = require("inquirer");
+
+
+var objectArray = [];
+
+
+var question1 = {
+	message: "What the color of a banana?",
+	answer: "yellow"
+}
+
+
+objectArray.push(question1);
+console.log(objectArray);
+console.log(objectArray[0].message)
+console.log(objectArray[0].answer);
+
+//above works so far
+
+
+runPrompt(objectArray.length)
+
+
+  function runPrompt(timesToRun){
+  var questionIndex = 0;
+  var currentQuestion = objectArray[questionIndex].message;
+  var currentAnswer = objectArray[questionIndex].answer
+  if(timesToRun === 0){
+    return;
+  }
+  
+      inquirer.prompt([
+        {
+	          type: "input",
+	          name: "option",
+	          message: currentQuestion
+	    }]).then(function (answers) {
+	    	if(answers.option === currentAnswer){
+	    		console.log("correct!!");
+	    	}else{
+	    		console.log("Incorrect! Answer was: " + currentAnswer)
+	    	}
+	    question++	
+	    runPrompt(timesToRun-1);
+	      
+       });
+    
+  }
