@@ -9,6 +9,27 @@ var inquirer = require("inquirer");
 //program contained in single object
 var flashCardObject = {
 
+
+
+	ClozeCard : function (fullText, clozeDel){
+
+		//Cloze constructor, only takes 2 arguments (per homework) NOTE** Prototype error checking method is at the bottom of this document!!!!
+		  	this.fullText = fullText;
+		  	this.cardBack = clozeDel;
+		  	this.cardFront = function () {
+		  		return this.fullText.replace(this.cardBack, " ________ ") //simply gives us a blank where we removed the answer	  		
+	  		}
+
+	},
+
+
+	BasicCard : function(front, back)  { //basic card constructor
+
+				this.cardFront = function(){ //set a method here to match Cloze constructor syntax
+					return front;
+				}
+				this.cardBack = back;
+	},
 	
 
 
@@ -28,10 +49,10 @@ var flashCardObject = {
 			    
 					switch(answers.menu) {
 						case "Create a Basic Card":
-							that.createBasicCard();
+							that.menuBasicCard();
 							break;
 						case "Create a Cloze Card":
-							that.createClozeCard();
+							that.menuClozeCard();
 							break;
 						case "Study Flash Cards":
 							if(that.flashCardArray.length === 0){ //first checks if any flash cards exist
@@ -39,7 +60,7 @@ var flashCardObject = {
 								that.mainMenu();
 								return;
 							}
-							that.studyFlashCard(that.flashCardArray.length, 0);
+							that.menuFlashCard(that.flashCardArray.length, 0);
 							break;
 						case "Exit Program":
 							console.log ("You have left the program\n\nHave a nice day!");
@@ -50,17 +71,10 @@ var flashCardObject = {
 		},
 
 
-	createBasicCard : function (){
+	menuBasicCard : function (){
 		var that = this;
 
-		function BasicCard(front, back)  { //basic card constructor
-				this.cardFront = function(){ //set a method here to match Cloze constructor syntax
-					return front;
-				}
-				this.cardBack = back;
-			}
-
-
+		
 		inquirer.prompt([
 		{
 			type: "input",
@@ -77,7 +91,7 @@ var flashCardObject = {
 
 		]).then(function (answers) {    	
 			
-			var basicCard = new BasicCard(answers.cardFront, answers.cardBack);
+			var basicCard = new that.BasicCard(answers.cardFront, answers.cardBack);
 			that.flashCardArray.push(basicCard);
 			console.log("-\n\n~~~~~Your basic flashcard card was saved to your study materials~~~~~~~\n\n-");
 			that.mainMenu();
@@ -88,19 +102,10 @@ var flashCardObject = {
 	},
 
 
-
-
-
-	createClozeCard : function (){
+	menuClozeCard : function (){
 		var that = this;
 
-		function ClozeCard (fullText, clozeDel) { //Cloze constructor, only takes 2 arguments (per homework);
-		  	this.fullText = fullText;
-		  	this.cardBack = clozeDel;
-		  	this.cardFront = function () {
-		  		return this.fullText.replace(this.cardBack, " ________ ") //simply gives us a blank where we removed the answer	  		
-	  		}
-  		}
+		
 
   		inquirer.prompt([
 		{
@@ -116,17 +121,16 @@ var flashCardObject = {
 		}
 
 
-		]).then(function (answers) {    	
-			if(answers.cardFront.toLowerCase().indexOf(answers.cardBack.toLowerCase()) === -1){ //important, checks to make sure user properly constructed the Cloze flash card, if not: Start Over//
-				console.log("The text you chose to omit must appear in the full text, please try again");
-				that.createClozeCard();
+		]).then(function (answers) {
+			var check = answers.cardFront.toLowerCase().indexOf(answers.cardBack.toLowerCase())			
 			
-			}else{
-				var clozeCard = new ClozeCard(answers.cardFront, answers.cardBack); //Cloze inputs are good, creates flash card
-				that.flashCardArray.push(clozeCard);
-				console.log("-\n\n~~~~~Your Cloze flashcard card was saved to your study materials~~~~~~~\n\n-");
-				that.mainMenu();
-			}
+			var clozeCard = new that.ClozeCard(answers.cardFront, answers.cardBack); //Cloze inputs are good, creates flash card
+			
+
+			clozeCard.dataChecker(check, clozeCard); //see Protype that was created at bottom of document
+
+			
+			
 		});
 
 	},
@@ -134,7 +138,7 @@ var flashCardObject = {
 
 
 
-	studyFlashCard : function (timesToRun, questionIndex){
+	menuFlashCard : function (timesToRun, questionIndex){
 		
 		if(!timesToRun){ //if times to run is zero or undefined
 			console.log("\nAll flash cards complete!\n");
@@ -165,8 +169,10 @@ var flashCardObject = {
 		    		console.log("Incorrect! The answer was: " + cardBack)
 		    	}
 
+		    	timesToRun--;
+		    	questionIndex++;
 			    
-			    that.studyFlashCard(timesToRun-- , questionIndex++); //some recursion to loop the program until all the flash cards have been displayed;
+			    that.menuFlashCard(timesToRun, questionIndex); //some recursion, to loop the program until all the flash cards have been displayed;
 			      
 		   });
 
@@ -185,13 +191,27 @@ var flashCardObject = {
 } //end object declaration
 
 
+
+
+flashCardObject.ClozeCard.prototype.dataChecker = function(data, object) {
+	    if(data === -1){
+		    	console.log("The text you chose to omit must also appear in the full text. Please try Again");
+		    	flashCardObject.menuClozeCard();
+		 }else{
+	    	flashCardObject.flashCardArray.push(object);
+			console.log("-\n\n~~~~~Your Cloze flashcard card was saved to your study materials~~~~~~~\n\n-");
+			flashCardObject.mainMenu();
+
+		   }
+	};
+
+
+
 flashCardObject.mainMenu(); //initial load
 
 
 
 
-//!future improvements: Allow users to write/append flash cards to a file, then load desired flash cards//
 
-//Add Save flash cards to main menu. In order to change minimal code, simply write the current array to a file, rewriting the file each time
 
-//Load Flash cards: puts flash cards that are written to file in current array.
+
