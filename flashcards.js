@@ -3,6 +3,8 @@
 
 var inquirer = require("inquirer");
 
+var fs = require("fs");
+
 
 
 
@@ -43,7 +45,7 @@ var flashCardObject = {
 					type: "list",
 					name: "menu",
 					message: "What would you like to do?",
-					choices: ["Create a Basic Card", "Create a Cloze Card", "Study Flash Cards", "Exit Program"]				
+					choices: ["Create a Basic Card", "Create a Cloze Card", "Study Flash Cards", "Save Flash Cards to File", "Load Flash Cards from File", "Exit Program"]				
 
 				}]).then(function (answers) {
 			    
@@ -60,7 +62,13 @@ var flashCardObject = {
 								that.mainMenu();
 								return;
 							}
-							that.menuFlashCard(that.flashCardArray.length, 0);
+							that.menuFlashCard(that.flashCardArray.length, 0, 0);
+							break;
+						case "Save Flash Cards to File":
+							that.menuSave();
+							break;
+						case "Load Flash Cards from File":
+							that.menuLoad();
 							break;
 						case "Exit Program":
 							console.log ("You have left the program\n\nHave a nice day!");
@@ -90,10 +98,10 @@ var flashCardObject = {
 
 
 		]).then(function (answers) {    	
-			
+			that.basicCardsArray.push([answers.cardFront, answers.cardBack])
 			var basicCard = new that.BasicCard(answers.cardFront, answers.cardBack);
 			that.flashCardArray.push(basicCard);
-			console.log("-\n\n~~~~~Your basic flashcard card was saved to your study materials~~~~~~~\n\n-");
+			console.log("-\n\n~~~~~Your basic flashcard card was saved to your active study materials~~~~~~~\n\n-");
 			that.mainMenu();
 
 		});
@@ -124,7 +132,7 @@ var flashCardObject = {
 		]).then(function (answers) {
 			var check = answers.cardFront.toLowerCase().indexOf(answers.cardBack.toLowerCase())			
 			
-			var clozeCard = new that.ClozeCard(answers.cardFront, answers.cardBack); //Cloze inputs are good, creates flash card
+			var clozeCard = new that.ClozeCard(answers.cardFront, answers.cardBack); //creates flash card
 			
 
 			clozeCard.dataChecker(check, clozeCard); //see Protype that was created at bottom of document
@@ -138,12 +146,12 @@ var flashCardObject = {
 
 
 
-	menuFlashCard : function (timesToRun, questionIndex){
+	menuFlashCard : function (timesToRun, questionIndex, score){
 		
 		if(!timesToRun){ //if times to run is zero or undefined
 			console.log("\nAll flash cards complete!\n");
-				console.log("Final Score: " + this.userScore + " out of " + this.flashCardArray.length);
-				console.log(((this.userScore / this.flashCardArray.length) * 100) + " % correct\n\n"); //computes and displays score as percentage correct
+				console.log("Final Score: " + score + " out of " + this.flashCardArray.length);
+				console.log(((score / this.flashCardArray.length) * 100) + " % correct\n\n"); //computes and displays score as percentage correct
 				this.mainMenu();
 				return;
 		}
@@ -164,15 +172,12 @@ var flashCardObject = {
 		    }]).then(function (answers) {
 		    	if(answers.userInput.toLowerCase() === cardBack.toLowerCase()){
 		    		console.log("You were correct!");
-		    		that.userScore++;
+		    		score++;
 		    	}else{
 		    		console.log("Incorrect! The answer was: " + cardBack)
 		    	}
-
-		    	timesToRun--;
-		    	questionIndex++;
 			    
-			    that.menuFlashCard(timesToRun, questionIndex); //some recursion, to loop the program until all the flash cards have been displayed;
+			    that.menuFlashCard(--timesToRun, ++questionIndex, score); //some recursion, to loop the program until all the flash cards have been displayed;
 			      
 		   });
 
@@ -181,10 +186,93 @@ var flashCardObject = {
 	},
 
 
+	menuSave : function (){
+		var that = this;
 
-	flashCardArray : [], //starts empty
+		inquirer.prompt([
+		    {
+		          type: "input",
+		          name: "fileName",
+		          message: "What would you like to name your save file? (File extension added automatically)"
+		    }]).then(function (answers) {
 
-	userScore: 0
+		    fs.appendFile("fileNames.txt", "," + answers.fileName + ".txt");
+
+
+			fs.writeFile(answers.fileName + ".txt", "[" + JSON.stringify(that.basicCardsArray) + "," + JSON.stringify(that.clozeCardsArray) + "]", function(err) {
+
+				  // If the code experiences any errors it will log the error to the console.
+				  if (err) {
+				    return console.log(err);
+				  }
+
+				  // Otherwise, it will print: "movies.txt was updated!"
+				  console.log("Your flash cards were saved!");
+				  that.mainMenu();
+
+				});
+			});
+	},
+
+
+	menuLoad : function (){ // felt there was probably a more sensible solution to this part of my problem, but I wanted it to be pretty flexible...
+
+		var that = this;
+		that.flashCardArray.length = 0; //clear flashCardArray on each load
+
+		fs.readFile("fileNames.txt", "utf8", function(error, data) {
+
+			  var dataArr = data.split(",");
+			  runInquirer(dataArr);
+
+		});
+
+		function runInquirer(dataArr){
+		inquirer.prompt([
+				{
+					type: "list",
+					name: "fileName",
+					message: "What would you like to do?",
+					choices: dataArr
+					
+
+				}]).then(function (answers) {
+					fs.readFile(answers.fileName, "utf8", function(error, data){
+						var loadArray = JSON.parse(data);
+						var loadBasic = loadArray[0] //array of basic constructor parts
+						var loadCloze = loadArray[1] //array of cloze constructor parts
+
+						for(var i = 0; i < loadBasic.length; i++){
+							var basicCard = new that.BasicCard(loadBasic[i][0], loadBasic[i][1]);
+							that.flashCardArray.push(basicCard);
+						}
+						console.log("Basic Cards loaded!");
+						
+
+						for(var j = 0; j < loadCloze.length; j ++){		
+			
+							var clozeCard = new that.ClozeCard(loadCloze[j][0], loadCloze[j][1]); //creates flash card			
+
+							that.flashCardArray.push(clozeCard);
+							console.log(that.flashCardArray);
+						}
+						console.log("Cloze Cards loaded!");
+						that.mainMenu();
+					})
+				});
+		}
+
+	},
+
+		
+
+
+	basicCardsArray :  [], 
+
+	clozeCardsArray: [],
+
+	flashCardArray : [] //starts empty
+
 
 
 
@@ -199,7 +287,8 @@ flashCardObject.ClozeCard.prototype.dataChecker = function(data, object) {
 		    	flashCardObject.menuClozeCard();
 		 }else{
 	    	flashCardObject.flashCardArray.push(object);
-			console.log("-\n\n~~~~~Your Cloze flashcard card was saved to your study materials~~~~~~~\n\n-");
+	    	flashCardObject.clozeCardsArray.push([object.fullText, object.cardBack]);
+			console.log("-\n\n~~~~~Your Cloze flashcard card was saved to your active study materials~~~~~~~\n\n-");
 			flashCardObject.mainMenu();
 
 		   }
